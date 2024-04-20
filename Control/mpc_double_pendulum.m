@@ -1,120 +1,130 @@
-% point stabilization + Multiple shooting + Runge Kutta
+% MATLAB code for Model Predictive Control (MPC) of a double inverted pendulum
+% Point stabilization + Multiple shooting + Runge Kutta
+
 clear; close all; clc;
 
 import casadi.*
 
-dt = 0.05;   %[s]
-N = 20;     % prediction horizon
-sim_time = 5; % Maximum simulation time
+% Parameters
+dt = 0.05;              % Sampling time [s]
+N = 20;                 % Prediction horizon
+sim_time = 5;           % Maximum simulation time
 
-states = SX.sym('states',4,1); n_states = length(states); %  [theta_1; theta_2; theta_1_dot; theta_2_dot]
-controls = SX.sym('controls'); n_controls = length(controls);
+% System dynamics
+states = SX.sym('states',4,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
+n_states = length(states);         % Number of states
+controls = SX.sym('controls');      % System inputs
+n_controls = length(controls);      % Number of inputs
 
-f = Function('f',{states,controls},{DoublePendulumDynamics(states,controls)}); % nonlinear mapping function f(x,u)
+% Create a function handle for the dynamics
+f = Function('f',{states,controls},{DoublePendulumDynamics(states,controls)});
 
-U = SX.sym('U',n_controls,N);   % Decision variables (controls)
+% Decision variables
+U = SX.sym('U',n_controls,N);       % Control variables
+X_ref = SX.sym('XS',n_states);      % Reference state
+Xt = SX.sym('Xt', n_states);        % Initial condition
 
-X_ref = SX.sym('XS',n_states);  % reference value
-Xt = SX.sym('Xt', n_states);    % initial condition
+X = SX.sym('X',n_states,(N+1));     % States over the optimization problem
 
-X = SX.sym('X',n_states,(N+1)); % A vector that represents the states over the optimization problem.
+% Objective and constraints
+obj = 0;    % Objective function
+g = [];     % Constraints vector
 
-obj = 0; % Objective function
-g = [];  % constraints vector
+% Weighting matrices
+Q = zeros(n_states);
+Q(1,1) = 10; Q(2,2) = 10; Q(3,3) = 1; Q(4,4) = 1; % State weights
+R = 0.1;    % Control weight
 
-Q = zeros(n_states); Q(1,1) = 10; Q(2,2) = 10; Q(3,3) = 1; Q(4,4) = 1; % weighing matrices (states)
-R = 0.1; % weighing matrices (controls)
+% Initial condition constraint
+g = [g;X(:,1)-Xt];
 
-g = [g;X(:,1)-Xt]; % initial condition constraints
+% Loop over prediction horizon
 for k = 1:N
-    obj = obj+(X(:,k)-X_ref)'*Q*(X(:,k)-X_ref) + U(:,k)'*R*U(:,k); % calculate obj    
+    % Objective function (tracking error and control effort)
+    obj = obj + (X(:,k)-X_ref)'*Q*(X(:,k)-X_ref) + U(:,k)'*R*U(:,k);
+    
+    % Runge-Kutta integration
     k1 = f(X(:,k), U(:,k));   
     k2 = f(X(:,k) + dt/2*k1, U(:,k)); 
     k3 = f(X(:,k) + dt/2*k2, U(:,k));
     k4 = f(X(:,k) + dt*k3, U(:,k)); 
-    st_next=X(:,k) +dt/6*(k1 +2*k2 +2*k3 +k4);
+    st_next = X(:,k) + dt/6*(k1 + 2*k2 + 2*k3 + k4);
+    
+    % State constraint
     g = [g;X(:,k+1)-st_next]; 
 end
 
-% make the decision variable one column  vector
+% Decision variables
 OPT_variables = [X(:);U(:)];
 
+% NLP problem
 nlp_prob = struct('f', obj, 'x', OPT_variables, 'g', g, 'p', [Xt;X_ref]);
 
+% Solver options
 opts = struct;
 opts.ipopt.max_iter = 2000;
-opts.ipopt.print_level =0;%0,3
+opts.ipopt.print_level = 0;         % Set to 0 for minimal output
 opts.print_time = 0;
-opts.ipopt.acceptable_tol =1e-8;
+opts.ipopt.acceptable_tol = 1e-8;
 opts.ipopt.acceptable_obj_change_tol = 1e-6;
 
-solver = nlpsol('solver', 'ipopt', nlp_prob,opts);
+% Initialize solver
+solver = nlpsol('solver', 'ipopt', nlp_prob, opts);
 
+% Initialize constraints and bounds
 args = struct;
+args.lbg(1:n_states*(N+1)) = 0;     % Equality constraints
+args.ubg(1:n_states*(N+1)) = 0;     % Equality constraints
+args.lbx(1:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
+args.ubx(1:n_states:n_states*(N+1),1) = inf;     % State upper bounds
+args.lbx(2:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
+args.ubx(2:n_states:n_states*(N+1),1) = inf;     % State upper bounds
+args.lbx(3:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
+args.ubx(3:n_states:n_states*(N+1),1) = inf;     % State upper bounds
+args.lbx(4:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
+args.ubx(4:n_states:n_states*(N+1),1) = inf;     % State upper bounds
+args.lbx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = -10;  % Control lower bounds
+args.ubx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = 10;   % Control upper bounds
 
-args.lbg(1:n_states*(N+1)) = 0; % Equality constraints
-args.ubg(1:n_states*(N+1)) = 0; % Equality constraints
-
-args.lbx(1:n_states:n_states*(N+1),1) = -inf; %state 1 lower bound
-args.ubx(1:n_states:n_states*(N+1),1) = inf; %state 1 upper bound
-args.lbx(2:n_states:n_states*(N+1),1) = -inf; %state 2 lower bound
-args.ubx(2:n_states:n_states*(N+1),1) = inf; %state 2 upper bound
-args.lbx(3:n_states:n_states*(N+1),1) = -inf; %state 3 lower bound
-args.ubx(3:n_states:n_states*(N+1),1) = inf; %state 3 upper bound
-args.lbx(4:n_states:n_states*(N+1),1) = -inf; %state 4 lower bound
-args.ubx(4:n_states:n_states*(N+1),1) = inf; %state 4 upper bound
-
-args.lbx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = -10; % input lower bound
-args.ubx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = 10; %v input upper bound
-
-x0 = [pi; pi; 0; 0];    % initial condition.
-xs = [0; 0; 0; 0];     % Reference posture.
+% Initial conditions
+x0 = [pi; pi; 0; 0];    % Initial condition
+xs = [0; 0; 0; 0];      % Reference posture
 
 x_cl(:,1) = x0;
-
 t(1) = 0;
+U0 = zeros(n_controls,N);
+X0 = repmat(x0,1,N+1);
 
-U0 = zeros(n_controls,N);        % two control inputs for each robot
-X0 = repmat(x0,1,N+1);          % initialization of the states decision variables
-
-
-
-% Start MPC
+% MPC loop
 mpciter = 0;
 u_cl=[];
-u_disturbed = [];
-
-main_loop = tic;
 while mpciter < sim_time / dt
-    args.p   = [x0;xs]; % set the values of the parameters vector
-
-    % initial value of the optimization variables
+    args.p   = [x0;xs]; % Set the parameter vector
+    
+    % Initial value of the optimization variables
     args.x0  = [X0(:);U0(:)]; 
 
+    % Solve optimization problem
     sol = solver('x0', args.x0, 'lbx', args.lbx, 'ubx', args.ubx,...
         'lbg', args.lbg, 'ubg', args.ubg,'p',args.p);
 
+    % Extract optimal states and controls
     x_ol = reshape(full(sol.x(1:n_states*(N+1))), n_states, N+1);
-    u_ol = reshape(full(sol.x(n_states*(N+1)+1:end)),n_controls,N); % get controls only from the solution
-
+    u_ol = reshape(full(sol.x(n_states*(N+1)+1:end)),n_controls,N);
     u_cl(:,mpciter+1) = u_ol(:,1);
     
+    % Update states
     x0 = x0 + dt*f(x0,u_cl(:,mpciter+1));
     x0 = full(x0);
-
     x_cl(:,mpciter+2) = x0;
-
     U0 = [u_ol(:,2:N) u_ol(:,N)];
     X0 = [x_ol(:,2:end) x_ol(:,end)];
-
-
     t(mpciter+2) = t(mpciter+1)+dt;
     mpciter = mpciter + 1;
-
     drawpendulum(x0(1), x0(2));
 end
 
-
+% Plotting
 figure
 subplot(3,1,1)
 plot(t(1:end-1),x_cl([1,3],1:end-1))
@@ -126,6 +136,7 @@ subplot(3,1,3)
 plot(t(1:end-1),u_cl)
 xlabel('$t$'); ylabel('$u$')
 sgtitle('Closed-loop trajectories: Double Pendulum')
+
 
 function drawpendulum(theta1,theta2)
 % This function draws the double pendulum, at the current angels theta1 and theta2
