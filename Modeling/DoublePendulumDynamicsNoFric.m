@@ -4,7 +4,7 @@
 % DoublePendulumDynamics(x,u) computes the current time derivative xdot of the inverted double 
 % pendulum's states. 
 
-function xdot = DoublePendulumDynamics(x,u)
+function xdot = DoublePendulumDynamicsNoFric(x,u)
 
     % System paramter
     m1 = 0.75;
@@ -16,7 +16,7 @@ function xdot = DoublePendulumDynamics(x,u)
     l2 = 1/2*L2;
     J1 = m1*L1^2/12;
     J2 = m2*L2^2/12;
-    r1 = 0.02; r2 = 0.04;
+    r1 = 0; r2 = 0;
 
     % Get the angles
     q1 = x(1);
