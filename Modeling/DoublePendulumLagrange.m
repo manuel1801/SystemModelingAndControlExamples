@@ -6,8 +6,8 @@
 clc; clear; close all;
 
 % Symbolic variables for the double pendulumn's parameters
-syms m1 m2 L1 L2 l1 l2 I1 I2 g r1 r2 p 
-params_sym = {m1 m2 L1 L2 l1 l2 I1 I2 g r1 r2 p};
+syms m1 m2 L1 L2 l1 l2 J1 J2 g r1 r2 p 
+params_sym = {m1 m2 L1 L2 l1 l2 J1 J2 g r1 r2 p};
 
 % Symbolic variables for the state q=[q1,q2], its 1st and 2nd time
 % derivatives q_dot=[q1_dot,q2_dot] and q_ddot=[q1_ddot,q2_ddot]
@@ -22,16 +22,16 @@ L1_num = 0.5;
 L2_num = 0.75;
 l1_num   = 1/2*L1_num;
 l2_num   = 1/2*L2_num;
-I1_num = m1_num*L1_num^2/12;
-I2_num = m2_num*L2_num^2/12;
+J1_num = m1_num*L1_num^2/12;
+J2_num = m2_num*L2_num^2/12;
 r1_num = 0.1;
 r2_num = 0.1;
-p_num = I2_num*m2_num*L1_num^2 + m1_num*m2_num*l1_num^2*l2_num^2 + I2_num*m1_num*l1_num^2 + I1_num*m2_num*l2_num^2 + I1_num*I2_num;
-params_num = {m1_num m2_num L1_num L2_num l1_num l2_num I1_num I2_num g_num r1_num r2_num p_num};
+p_num = J2_num*m2_num*L1_num^2 + m1_num*m2_num*l1_num^2*l2_num^2 + J2_num*m1_num*l1_num^2 + J1_num*m2_num*l2_num^2 + J1_num*J2_num;
+params_num = {m1_num m2_num L1_num L2_num l1_num l2_num J1_num J2_num g_num r1_num r2_num p_num};
 
 % Lagrange Function for the double pendulum
-L = 1/2*(m1*l1^2 + m2*L1^2+I1)*q1_dot^2 ...
-    + 1/2*(m2*l2^2 + I2)*q2_dot^2 ...
+L = 1/2*(m1*l1^2 + m2*L1^2+J1)*q1_dot^2 ...
+    + 1/2*(m2*l2^2 + J2)*q2_dot^2 ...
     + m2*L1*l2*cos(q1 - q2)*q1_dot*q2_dot ...
     - (m1*l1 + m2*L1)*g*cos(q1) ...
     - m2*l2*g*cos(q2);
@@ -120,9 +120,9 @@ A = simplify(A);
 B = subs(B,{q1 q2 q1_dot q2_dot},{0 0 0 0});
 B = simplify(B);
 
-% For better readability use p := I2*m2*L1^2 + m1*m2*l1^2*l2^2 + I2*m1*l1^2 + I1*m2*l2^2 + I1*I2
-A = subs(A,I2*m2*L1^2 + m1*m2*l1^2*l2^2 + I2*m1*l1^2 + I1*m2*l2^2 + I1*I2,p);
-B = subs(B,I2*m2*L1^2 + m1*m2*l1^2*l2^2 + I2*m1*l1^2 + I1*m2*l2^2 + I1*I2,p);
+% For better readability use p := J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2
+A = subs(A,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
+B = subs(B,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
 
 % A and B matrix of the linearized model
 disp('A='); disp(A);
