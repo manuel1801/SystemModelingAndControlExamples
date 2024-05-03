@@ -1,5 +1,4 @@
-% MATLAB code for Model Predictive Control (MPC) of a double inverted pendulum
-% Point stabilization + Multiple shooting + Runge Kutta
+% MATLAB code for Moving Horizon Estimation (MHE) of a double inverted pendulum
 
 clear; close all; clc;
 
@@ -13,15 +12,20 @@ import casadi.*
 dt = 0.05;              % Sampling time [s]
 N = 20;                 % Prediction horizon
 sim_time = 5;           % Maximum simulation time
+N_sim = sim_time/dt;
+v_max = 1e-1;
 
 % System dynamics
 states = SX.sym('states',4,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
 n_states = length(states);         % Number of states
 controls = SX.sym('controls');      % System inputs
 n_controls = length(controls);      % Number of inputs
+n_outputs = 2;
+process_noise = SX.sym('process_noise',2,1);
 
 % Create a function handle for the dynamics
 f = Function('f',{states,controls},{DoublePendulumDynamics(states,controls)});
+f_noisy = Function('f',{states,controls,process_noise},{DoublePendulumDynamicsNoise(states,controls,process_noise)});
 
 % Decision variables
 U = SX.sym('U',n_controls,N);       % Control variables
@@ -94,15 +98,18 @@ args.ubx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = 10;   % Co
 x0 = [pi; pi; 0; 0];    % Initial condition
 xs = [0; 0; 0; 0];      % Reference posture
 
+v = v_max*(2*rand(n_outputs,N_sim+1)-1);
+
 x_cl(:,1) = x0;
+y_cl(:,1) = x0(1:n_outputs) + v(:,1);
 t(1) = 0;
 U0 = zeros(n_controls,N);
 X0 = repmat(x0,1,N+1);
 
 % MPC loop
 mpciter = 0;
-u_cl=[];
-while mpciter < sim_time / dt
+u_cl = [];
+while mpciter < N_sim
     args.p   = [x0;xs]; % Set the parameter vector
     
     % Initial value of the optimization variables
@@ -121,11 +128,12 @@ while mpciter < sim_time / dt
     x0 = x0 + dt*f(x0,u_cl(:,mpciter+1));
     x0 = full(x0);
     x_cl(:,mpciter+2) = x0;
+    y_cl(:,mpciter+2) = x0(1:n_outputs) + v(:,mpciter+2);
     U0 = [u_ol(:,2:N) u_ol(:,N)];
     X0 = [x_ol(:,2:end) x_ol(:,end)];
-    t(mpciter+2) = t(mpciter+1)+dt;
+    t(mpciter+2) = t(mpciter+1)+dt;    
     mpciter = mpciter + 1;
-    drawpendulum(x0(1), x0(2));
+    % drawpendulum(x0(1), x0(2));
 end
 
 % Plotting
@@ -141,6 +149,16 @@ plot(t(1:end-1),u_cl)
 xlabel('$t$'); ylabel('$u$')
 sgtitle('Closed-loop trajectories: Double Pendulum')
 
+figure
+subplot(2,1,1)
+plot(t(1:end-1),x_cl(1,1:end-1)); hold on
+plot(t(1:end-1),y_cl(1,1:end-1)); 
+legend({'$\theta_1$','$\tilde \theta_1$'}, Interpreter="latex")
+subplot(2,1,2)
+plot(t(1:end-1),x_cl(2,1:end-1));hold on
+plot(t(1:end-1),y_cl(2,1:end-1));
+legend({'$\theta_2$','$\tilde \theta_2$'}, Interpreter="latex")
+sgtitle('Closed-loop output trajectories: Double Pendulum')
 
 function drawpendulum(theta1,theta2)
 % This function draws the double pendulum, at the current angels theta1 and theta2
@@ -155,3 +173,17 @@ function drawpendulum(theta1,theta2)
     ylim([-1.5,1.5])
     
 end
+
+
+% Apply MHE using noisy memasurements and a model where the friction terms
+% are unknown and treated as process noise
+
+
+
+
+
+
+
+
+
+
