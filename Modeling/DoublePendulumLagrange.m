@@ -24,8 +24,8 @@ l1_num   = 1/2*L1_num;
 l2_num   = 1/2*L2_num;
 J1_num = m1_num*L1_num^2/12;
 J2_num = m2_num*L2_num^2/12;
-r1_num = 0.1;
-r2_num = 0.1;
+r1_num = 0.02;
+r2_num = 0.04;
 p_num = J2_num*m2_num*L1_num^2 + m1_num*m2_num*l1_num^2*l2_num^2 + J2_num*m1_num*l1_num^2 + J1_num*m2_num*l2_num^2 + J1_num*J2_num;
 params_num = {m1_num m2_num L1_num L2_num l1_num l2_num J1_num J2_num g_num r1_num r2_num p_num};
 
