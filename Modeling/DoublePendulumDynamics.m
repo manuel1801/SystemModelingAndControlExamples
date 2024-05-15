@@ -16,7 +16,7 @@ function xdot = DoublePendulumDynamics(x,u)
     l2 = 1/2*L2;
     J1 = m1*L1^2/12;
     J2 = m2*L2^2/12;
-    r1 = 0.02; r2 = 0.04;
+    r1 = 0.5; r2 = 0.5;
 
     % Get the angles
     q1 = x(1);
