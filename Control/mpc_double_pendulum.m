@@ -34,9 +34,12 @@ X = SX.sym('X',n_states,(N+1));     % States over the optimization problem
 obj = 0;    % Objective function
 g = [];     % Constraints vector
 
+% Control limits
+u_ub = 10; u_lb = -10;
+
 % Weighting matrices
 Q = zeros(n_states);
-Q(1,1) = 10; Q(2,2) = 10; Q(3,3) = 1; Q(4,4) = 1; % State weights
+Q(1,1) = 20; Q(2,2) = 20; Q(3,3) = 1; Q(4,4) = 1; % State weights
 R = 0.1;    % Control weight
 
 % Initial condition constraint
@@ -87,8 +90,8 @@ args.lbx(3:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
 args.ubx(3:n_states:n_states*(N+1),1) = inf;     % State upper bounds
 args.lbx(4:n_states:n_states*(N+1),1) = -inf;    % State lower bounds
 args.ubx(4:n_states:n_states*(N+1),1) = inf;     % State upper bounds
-args.lbx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = -10;  % Control lower bounds
-args.ubx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = 10;   % Control upper bounds
+args.lbx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = u_lb;  % Control lower bounds
+args.ubx(n_states*(N+1)+1:n_controls:n_states*(N+1)+n_controls*N,1) = u_ub;   % Control upper bounds
 
 % Initial conditions
 x0 = [pi; pi; 0; 0];    % Initial condition
