@@ -74,7 +74,7 @@ for k=1:N_sim
    t(k+1) = t(k)+dt;
 
    % Draw the current pendulums configuration
-   drawpendulum(x_OL(1,k),x_OL(2,k));
+   drawpendulum(x_OL_noisy(1,k),x_OL_noisy(2,k));
 
 end
 

@@ -10,12 +10,15 @@ import casadi.*
 
 % Parameters
 dt = 0.05;              % Sampling time [s]
-N_MCP = 20;                 % Prediction horizon
 sim_time = 5;           % Maximum simulation time
 N_sim = sim_time/dt;
-v_max = 1e-1; v_min = -v_max;
 
-w_true = [0.02; 0.04];
+v_max = 5e-2; v_min = -v_max;
+w_max = 1e-5; w_min = -w_max;
+
+N_MHE = 30;
+N_MPC = 20;                 % Prediction horizon
+
 
 % System dynamics
 states = SX.sym('states',4,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
@@ -23,22 +26,37 @@ n_states = length(states);         % Number of states
 controls = SX.sym('controls');      % System inputs
 n_controls = length(controls);      % Number of inputs
 n_outputs = 2;
-process_noise = SX.sym('process_noise',2,1);
+process_noise = SX.sym('process_noise',4,1);
+n_process_noise = length(process_noise);
 
 % Create a function handle for the dynamics
-f = Function('f',{states,controls},{DoublePendulumDynamics(states,controls)});
-f_noisy = Function('f',{states,controls,process_noise},{DoublePendulumDynamicsNoise(states,controls,process_noise)});
+f = Function('f',{states,controls,process_noise},{DoublePendulumDynamics(states,controls)+process_noise});
+% f_noisy = Function('f',{states,controls,process_noise},{DoublePendulumDynamicsNoise(states,controls,process_noise)});
+
+% Output function
+h = Function('h',{states},{states(1:2)});
+
+
+v = v_max*(2*rand(n_outputs,N_sim)-1);
+w = w_max*(2*rand(n_process_noise,N_sim+N_MPC)-1);
+w0 = zeros(n_process_noise,1);
+
+
 
 % Decision variables
-U = SX.sym('U',n_controls,N_MCP);       % Control variables
+U = SX.sym('U',n_controls,N_MPC);       % Control variables
 X_ref = SX.sym('XS',n_states);      % Reference state
 Xt = SX.sym('Xt', n_states);        % Initial condition
 
-X = SX.sym('X',n_states,(N_MCP+1));     % States over the optimization problem
+X = SX.sym('X',n_states,(N_MPC+1));     % States over the optimization problem
+W = SX.sym('W',n_process_noise,N_MPC);     % process noise over the optimization problem
 
 % Objective and constraints
 obj = 0;    % Objective function
 g = [];     % Constraints vector
+
+% Control limits
+u_ub = 20; u_lb = -20;
 
 % Weighting matrices
 Q = zeros(n_states);
@@ -49,15 +67,15 @@ R = 0.1;    % Control weight
 g = [g;X(:,1)-Xt];
 
 % Loop over prediction horizon
-for k = 1:N_MCP
+for k = 1:N_MPC
     % Objective function (tracking error and control effort)
     obj = obj + (X(:,k)-X_ref)'*Q*(X(:,k)-X_ref) + U(:,k)'*R*U(:,k);
     
     % Runge-Kutta integration
-    k1 = f(X(:,k), U(:,k));   
-    k2 = f(X(:,k) + dt/2*k1, U(:,k)); 
-    k3 = f(X(:,k) + dt/2*k2, U(:,k));
-    k4 = f(X(:,k) + dt*k3, U(:,k)); 
+    k1 = f(X(:,k), U(:,k), W(:,k));   
+    k2 = f(X(:,k) + dt/2*k1, U(:,k), W(:,k)); 
+    k3 = f(X(:,k) + dt/2*k2, U(:,k), W(:,k));
+    k4 = f(X(:,k) + dt*k3, U(:,k), W(:,k)); 
     st_next = X(:,k) + dt/6*(k1 + 2*k2 + 2*k3 + k4);
     
     % State constraint
@@ -67,8 +85,11 @@ end
 % Decision variables
 OPT_variables = [X(:);U(:)];
 
+% Store all parameters in one vector
+params = [Xt;X_ref;W(:)];
+
 % NLP problem
-nlp_prob = struct('f', obj, 'x', OPT_variables, 'g', g, 'p', [Xt;X_ref]);
+nlp_prob = struct('f', obj, 'x', OPT_variables, 'g', g, 'p', params);
 
 % Solver options
 opts = struct;
@@ -83,36 +104,38 @@ solver = nlpsol('solver', 'ipopt', nlp_prob, opts);
 
 % Initialize constraints and bounds
 args = struct;
-args.lbg(1:n_states*(N_MCP+1)) = 0;     % Equality constraints
-args.ubg(1:n_states*(N_MCP+1)) = 0;     % Equality constraints
-args.lbx(1:n_states:n_states*(N_MCP+1),1) = -inf;    % State lower bounds
-args.ubx(1:n_states:n_states*(N_MCP+1),1) = inf;     % State upper bounds
-args.lbx(2:n_states:n_states*(N_MCP+1),1) = -inf;    % State lower bounds
-args.ubx(2:n_states:n_states*(N_MCP+1),1) = inf;     % State upper bounds
-args.lbx(3:n_states:n_states*(N_MCP+1),1) = -inf;    % State lower bounds
-args.ubx(3:n_states:n_states*(N_MCP+1),1) = inf;     % State upper bounds
-args.lbx(4:n_states:n_states*(N_MCP+1),1) = -inf;    % State lower bounds
-args.ubx(4:n_states:n_states*(N_MCP+1),1) = inf;     % State upper bounds
-args.lbx(n_states*(N_MCP+1)+1:n_controls:n_states*(N_MCP+1)+n_controls*N_MCP,1) = -10;  % Control lower bounds
-args.ubx(n_states*(N_MCP+1)+1:n_controls:n_states*(N_MCP+1)+n_controls*N_MCP,1) = 10;   % Control upper bounds
+args.lbg(1:n_states*(N_MPC+1)) = 0;     % Equality constraints
+args.ubg(1:n_states*(N_MPC+1)) = 0;     % Equality constraints
+args.lbx(1:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(1:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(2:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(2:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(3:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(3:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(4:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(4:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(n_states*(N_MPC+1)+1:n_controls:n_states*(N_MPC+1)+n_controls*N_MPC,1) = u_lb;  % Control lower bounds
+args.ubx(n_states*(N_MPC+1)+1:n_controls:n_states*(N_MPC+1)+n_controls*N_MPC,1) = u_ub;   % Control upper bounds
 
 % Initial conditions
 x0 = [pi; pi; 0; 0];    % Initial condition
 xs = [0; 0; 0; 0];      % Reference posture
 
-v = v_max*(2*rand(n_outputs,N_sim+1)-1);
 
-x_cl(:,1) = x0;
-y_cl(:,1) = x0(1:n_outputs) + v(:,1);
 t(1) = 0;
-U0 = zeros(n_controls,N_MCP);
-X0 = repmat(x0,1,N_MCP+1);
+U0 = zeros(n_controls,N_MPC);
+X0 = repmat(x0,1,N_MPC+1);
 
 % MPC loop
-mpciter = 0;
-u_cl = [];
-while mpciter < N_sim
-    args.p   = [x0;xs]; % Set the parameter vector
+xt = x0;
+xt_noisy = xt + w_max*(2*rand(n_process_noise,1)-1);
+
+x_cl(:,1) = xt;
+x_cl_noisy(:,1) = xt_noisy;
+
+u_cl=[];
+for k  = 1 : N_sim
+    args.p   = [xt_noisy;xs; reshape(w(:,k:k+N_MPC-1), n_process_noise*N_MPC,1)]; % Set the parameter vector
     
     % Initial value of the optimization variables
     args.x0  = [X0(:);U0(:)]; 
@@ -122,76 +145,71 @@ while mpciter < N_sim
         'lbg', args.lbg, 'ubg', args.ubg,'p',args.p);
 
     % Extract optimal states and controls
-    x_ol = reshape(full(sol.x(1:n_states*(N_MCP+1))), n_states, N_MCP+1);
-    u_ol = reshape(full(sol.x(n_states*(N_MCP+1)+1:end)),n_controls,N_MCP);
-    u_cl(:,mpciter+1) = u_ol(:,1);
-    
-    % Update states
-    x0 = x0 + dt*f(x0,u_cl(:,mpciter+1));
-    x0 = full(x0);
-    x_cl(:,mpciter+2) = x0;
-    y_cl(:,mpciter+2) = x0(1:n_outputs) + v(:,mpciter+2);
-    U0 = [u_ol(:,2:N_MCP) u_ol(:,N_MCP)];
+    x_ol = reshape(full(sol.x(1:n_states*(N_MPC+1))), n_states, N_MPC+1);
+    u_ol = reshape(full(sol.x(n_states*(N_MPC+1)+1:end)),n_controls,N_MPC);
+    u_cl(:,k) = u_ol(:,1);
+
+    y_cl(:,k) = full(h(xt_noisy)) + v(:,k);
+        
+    % Apply the input and get new state measurement
+    k1 = f(xt, u_cl(:,k), w0);   
+    k2 = f(xt + dt/2*k1, u_cl(:,k), w0); 
+    k3 = f(xt + dt/2*k2, u_cl(:,k), w0);
+    k4 = f(xt + dt*k3, u_cl(:,k), w0); 
+    xt = xt + dt/6*(k1 + 2*k2 + 2*k3 + k4);
+
+    k1 = f(xt_noisy, u_cl(:,k), w(:,k));   
+    k2 = f(xt_noisy + dt/2*k1, u_cl(:,k), w(:,k)); 
+    k3 = f(xt_noisy + dt/2*k2, u_cl(:,k), w(:,k));
+    k4 = f(xt_noisy + dt*k3, u_cl(:,k), w(:,k)); 
+    xt_noisy = xt_noisy + dt/6*(k1 + 2*k2 + 2*k3 + k4);
+
+    xt = full(xt);
+    xt_noisy = full(xt_noisy);
+
+    x_cl(:,k+1) = xt;
+    x_cl_noisy(:,k+1) = xt_noisy;
+
+    U0 = [u_ol(:,2:N_MPC) u_ol(:,N_MPC)];
     X0 = [x_ol(:,2:end) x_ol(:,end)];
-    t(mpciter+2) = t(mpciter+1)+dt;    
-    mpciter = mpciter + 1;
-    % drawpendulum(x0(1), x0(2));
+    t(k+1) = t(k)+dt;
+    % drawpendulum(xt_noisy(1), xt_noisy(2));
 end
+
+t = t(1:end-1);
+x_cl = x_cl(:,1:end-1);
+x_cl_noisy = x_cl_noisy(:,1:end-1);
+
 
 % Plotting
 figure
 subplot(3,1,1)
-plot(t(1:end-1),x_cl([1,3],1:end-1))
-legend({'$\theta_1$','$\dot \theta_1$'}, Interpreter="latex")
+plot(t,x_cl_noisy([1,2],:))
+legend({'$\theta_1$','$\theta_3$'}, Interpreter="latex")
 subplot(3,1,2)
-plot(t(1:end-1),x_cl([2,4],1:end-1))
-legend({'$\theta_2$','$\dot \theta_2$'}, Interpreter="latex")
+plot(t,x_cl_noisy([3,4],:))
+legend({'$\dot \theta_1$','$\dot \theta_2$'}, Interpreter="latex")
 subplot(3,1,3)
-plot(t(1:end-1),u_cl)
+plot(t,u_cl)
 xlabel('$t$'); ylabel('$u$')
 sgtitle('Closed-loop trajectories: Double Pendulum')
 
-figure
-subplot(2,1,1)
-plot(t(1:end-1),x_cl(1,1:end-1)); hold on
-plot(t(1:end-1),y_cl(1,1:end-1)); 
-legend({'$\theta_1$','$\tilde \theta_1$'}, Interpreter="latex")
-subplot(2,1,2)
-plot(t(1:end-1),x_cl(2,1:end-1));hold on
-plot(t(1:end-1),y_cl(2,1:end-1));
-legend({'$\theta_2$','$\tilde \theta_2$'}, Interpreter="latex")
-sgtitle('Closed-loop output trajectories: Double Pendulum')
 
+x_max = ceil(max(max(x_cl_noisy))); x_min = -x_max;
+y_max = ceil(max(max(y_cl))); y_min = -y_max;
 
+      
 
-% Apply MHE using noisy memasurements and a model where the friction terms
-% are unknown and treated as process noise
-
-N_MHE = 20; % or 15 (minimum) % prediction horizon
-
-% w_max = 0.05; w_min = 0;   % Bound on process disturbance
-w_max = w_true(2)+0.0001; w_min = w_true(1)-0.0001;   % Bound on process disturbance (unknown!!!)
-
-x_min = -10;   x_max = 10;      % Bound on the state
-y_min = -10; y_max = 10;  % Bound on the output
-
-
-process_noise = SX.sym('process_noise',2,1);     
-n_process_noise = length(process_noise);         
-
-
-x0 = [pi; pi; 0; 0] ; % + 0.001*rand(n_states,1);    % Initial guess of the state
-x0_hat = x0; % Initial value for \hat x(t-N)
-
+x0_hat = [pi; pi; 0; 0]; % Initial guess for \hat x(t-N)
 
 
 % Weighting matrix for the estimated process disturbance
 Q = 1 / (1/12*(w_max - w_min)^2) * eye(n_process_noise);
-Q = diag([50 50]);
+Q = 1e3*eye(n_states);
 
 % Weighting matrix for the estimated measurement noise
 R = 1 / (1/12*(v_max - v_min)^2) * eye(n_outputs);
-R = 1e3;
+R = 1e1;
 
 % Weighting matrix for prior weighting
 P = 1*eye(n_states);
@@ -203,7 +221,6 @@ X0_hat = SX.sym('X0_hat', n_states,1);   % To store \hat x(t-N)
 % To store estimated state-, and output sequences 
 x_est_cl = zeros(n_states,N_sim);
 y_est_cl = zeros(n_outputs,N_sim);
-w_est_cl = zeros(n_process_noise,N_sim);
 
 % Initial guess for the MHE optimization problem
 X0_est_init = x0_hat; % initial state guess
@@ -219,8 +236,8 @@ for k  = 1 : N_sim
 
         X = SX.sym('X', n_states,N_MHE_t+1);        % Estimated state sequence
         W = SX.sym('W', n_process_noise,N_MHE_t);   % Estimated process noise sequence
+        U = SX.sym('W', n_controls,N_MHE_t);   % External control sequence sequence
         Y_meas = SX.sym('Y', n_outputs,N_MHE_t);    % Output measurements
-        U = SX.sym('U',n_controls,N_MHE_t);         % Control variables
 
                     
         g_x = [];
@@ -230,7 +247,7 @@ for k  = 1 : N_sim
         for i = 1:N_MHE_t
             
             % Compute output symbolically
-            y_hat = X(1:n_outputs,i);
+            y_hat = h(X(:,i));
         
             % Add w_k'Qw_k + v_k'Rv_k to the objective function (with v=y_meas-y_est)
             obj = obj + W(:,i)'*Q*W(:,i) + (y_hat - Y_meas(:,i))'*R*(y_hat - Y_meas(:,i));
@@ -239,8 +256,12 @@ for k  = 1 : N_sim
             g_y = [g_y;y_hat];
             
             % Compute next state symbolically
-            x_next = f_noisy(X(:,i), U(:,i), W(:,i)); 
-        
+            k1 = f(X(:,i), U(:,i), W(:,i));   
+            k2 = f(X(:,i) + dt/2*k1, U(:,i), W(:,i));
+            k3 = f(X(:,i) + dt/2*k2, U(:,i), W(:,i));
+            k4 = f(X(:,i) + dt*k3, U(:,i), W(:,i)); 
+            x_next = X(:,i) +dt/6*(k1 +2*k2 +2*k3 +k4); 
+
             % Add next state to state constraint vector
             g_x = [g_x; X(:,i+1) - x_next];
                 
@@ -266,10 +287,10 @@ for k  = 1 : N_sim
                 
         % Specify lower and upper bounds on the nonlinear constraint vector g
         args = struct;
-        args.lbg(1:n_states*N_MHE_t) = 0; %  Upper bound on estimated state
-        args.ubg(1:n_states*N_MHE_t) = 0; %  Lower bound on estimated state
-        args.lbg(n_states*N_MHE_t+1:n_states*N_MHE_t+n_outputs*N_MHE_t) = y_min; % Upper bound on estimated output
-        args.ubg(n_states*N_MHE_t+1:n_states*N_MHE_t+n_outputs*N_MHE_t) = y_max; % Upper bound on estimated output
+        args.lbg(1:n_states*N_MHE_t) = 0; 
+        args.ubg(1:n_states*N_MHE_t) = 0; 
+        args.lbg(n_states*N_MHE_t+1:n_states*N_MHE_t+n_outputs*N_MHE_t) = y_min;
+        args.ubg(n_states*N_MHE_t+1:n_states*N_MHE_t+n_outputs*N_MHE_t) = y_max;
                 
         % Specify lower and upper bounds on the optimization variables
         args.lbx(1:n_states*(N_MHE_t+1)) = x_min;
@@ -280,7 +301,7 @@ for k  = 1 : N_sim
     end
       
     % Write \hat x(t-N) and past N measurements into param vector
-    args.p = [x0_hat; reshape(y_cl(:,k-N_MHE_t:k-1),n_outputs*N_MHE_t,1); reshape(u_cl(:,k-N_MHE_t:k-1),n_controls*N_MHE_t,1)];
+    args.p = [x0_hat; reshape(y_cl(:,k-N_MHE_t:k-1),n_outputs*N_MHE_t,1);reshape(u_cl(:,k-N_MHE_t:k-1),n_controls*N_MHE_t,1)];
 
     % Set initial guess for MHE optimization problem
     args.x0 = [X0_est_init(:); W_est_init(:)];
@@ -296,9 +317,9 @@ for k  = 1 : N_sim
    
     % Estimate of current state x_t and process noise w_t
     x_est_cl(:,k) = full(X_est(:,end));
-    if N_MHE_t > 0
-        w_est_cl(:,k) = full(W_est(:,end)); 
-    end
+%     if N_MHE_t > 0
+%         w_est_cl(:,k) = full(W_est(:,end)); 
+%     end
    
     % \hat x(t-N) and initial guess for next iteration
     if k > N_MHE % N_MHE reached 
@@ -326,21 +347,14 @@ end
 
 % Plotting
 figure
-subplot(3,1,1)
-plot(t(1:end-1),x_cl([1,3],1:end-1)); hold on
-plot(t(1:end-1),x_est_cl([1,3],:)); 
-legend({'$\theta_1$','$\dot \theta_1$','$\hat \theta_1$','$\hat{\dot \theta_1}$'}, Interpreter="latex")
-subplot(3,1,2)
-plot(t(1:end-1),x_cl([2,4],1:end-1)); hold on
-plot(t(1:end-1),x_est_cl([2,4],:)); 
-legend({'$\theta_2$','$\dot \theta_2$','$\hat \theta_2$','$\hat{\dot \theta_2}$'}, Interpreter="latex")
-subplot(3,1,3)
-plot(t(1:end-1),w_est_cl(1,:)); hold on
-plot(t(1:end-1),w_est_cl(2,:)); hold on
-plot(t(1:end-1),w_true(1)*ones(1,N_sim), '--'); hold on
-plot(t(1:end-1),w_true(2)*ones(1,N_sim), '--');
-legend({'$\hat w_1$','$\hat w_2$', '$w_1$, $w_2$'}, Interpreter="latex")
-
+subplot(2,1,1)
+plot(t,x_cl_noisy([1,2],:)); hold on
+plot(t,x_est_cl([1,2],:));
+legend({'$\theta_1$','$\theta_2$','$\hat \theta_1$','$\hat \theta_2$'}, Interpreter="latex")
+subplot(2,1,2)
+plot(t,x_cl_noisy([3,4],:)); hold on
+plot(t,x_est_cl([3,4],:));
+legend({'$\dot \theta_1$','$\dot \theta_2$','$\hat{\dot \theta_1}$','$\hat{\dot \theta_2}$'}, Interpreter="latex")
 
 
 

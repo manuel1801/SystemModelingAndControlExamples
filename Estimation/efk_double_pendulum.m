@@ -115,7 +115,7 @@ for i = 1:N_sim
     k4 = f(x_cl(:,i) + dt*k3, u_cl(:,i)); 
     x_cl(:,i+1) = full(x_cl(:,i) + dt/6*(k1 + 2*k2 + 2*k3 + k4));    
     y_cl(:,i+1) = C*x_cl(:,i) + v(:,i+1);
-    % drawpendulum(x_cl(1,i+1),x_cl(2,i+1)); % Draw pendulum at each step
+    drawpendulum(x_cl(1,i+1),x_cl(2,i+1)); % Draw pendulum at each step
 end
 
 

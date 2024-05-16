@@ -75,18 +75,27 @@ x0 = zeros(n_states,1) + alpha*rand(n_states, 1);
 
 t = 0:dt:sim_time;
 
-% Open loop simulation
-x_ol(:,1) = x0;
-for i = 1:sim_time/dt
 
-    % Runge-Kutta integration for open loop
-    k1 = f(x_ol(:,i), 0);   
-    k2 = f(x_ol(:,i) + dt/2*k1, 0); 
-    k3 = f(x_ol(:,i) + dt/2*k2, 0);
-    k4 = f(x_ol(:,i) + dt*k3, 0); 
-    x_ol(:,i+1) = full(x_ol(:,i) + dt/6*(k1 + 2*k2 + 2*k3 + k4));    
-    drawpendulum(x_ol(1,i+1),x_ol(2,i+1)); % Draw pendulum at each step
-end
+% % Open loop simulation
+% x_ol(:,1) = x0;
+% for i = 1:sim_time/dt
+% 
+%     % Runge-Kutta integration for open loop
+%     k1 = f(x_ol(:,i), 0);   
+%     k2 = f(x_ol(:,i) + dt/2*k1, 0); 
+%     k3 = f(x_ol(:,i) + dt/2*k2, 0);
+%     k4 = f(x_ol(:,i) + dt*k3, 0); 
+%     x_ol(:,i+1) = full(x_ol(:,i) + dt/6*(k1 + 2*k2 + 2*k3 + k4));    
+%     drawpendulum(x_ol(1,i+1),x_ol(2,i+1)); % Draw pendulum at each step
+% end
+% figure
+% subplot(2,1,1)
+% plot(t(1:end-1),x_ol([1,3],1:end-1))
+% legend({'$\theta_1$','$\dot \theta_1$'}, Interpreter="latex")
+% subplot(2,1,2)
+% plot(t(1:end-1),x_ol([2,4],1:end-1))
+% legend({'$\theta_2$','$\dot \theta_2$'}, Interpreter="latex")
+% sgtitle('Open-loop trajectories: Double Pendulum')
 
 
 % Closed loop simulation
@@ -104,18 +113,6 @@ for i = 1:sim_time/dt
     x_cl(:,i+1) = full(x_cl(:,i) + dt/6*(k1 + 2*k2 + 2*k3 + k4));    
     drawpendulum(x_cl(1,i+1),x_cl(2,i+1)); % Draw pendulum at each step
 end
-
-% Plotting
-
-% Open-Loop
-figure
-subplot(2,1,1)
-plot(t(1:end-1),x_ol([1,3],1:end-1))
-legend({'$\theta_1$','$\dot \theta_1$'}, Interpreter="latex")
-subplot(2,1,2)
-plot(t(1:end-1),x_ol([2,4],1:end-1))
-legend({'$\theta_2$','$\dot \theta_2$'}, Interpreter="latex")
-sgtitle('Open-loop trajectories: Double Pendulum')
 
 % Closed-Loop
 figure
