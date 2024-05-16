@@ -35,11 +35,11 @@ obj = 0;    % Objective function
 g = [];     % Constraints vector
 
 % Control limits
-u_ub = 10; u_lb = -10;
+u_ub = 20; u_lb = -20;
 
 % Weighting matrices
 Q = zeros(n_states);
-Q(1,1) = 20; Q(2,2) = 20; Q(3,3) = 1; Q(4,4) = 1; % State weights
+Q(1,1) = 10; Q(2,2) = 10; Q(3,3) = 1; Q(4,4) = 1; % State weights
 R = 0.1;    % Control weight
 
 % Initial condition constraint
@@ -64,8 +64,11 @@ end
 % Decision variables
 OPT_variables = [X(:);U(:)];
 
+% Store all parameters in one vector
+params = [Xt;X_ref];
+
 % NLP problem
-nlp_prob = struct('f', obj, 'x', OPT_variables, 'g', g, 'p', [Xt;X_ref]);
+nlp_prob = struct('f', obj, 'x', OPT_variables, 'g', g, 'p', params);
 
 % Solver options
 opts = struct;
@@ -119,9 +122,14 @@ while mpciter < sim_time / dt
     x_ol = reshape(full(sol.x(1:n_states*(N+1))), n_states, N+1);
     u_ol = reshape(full(sol.x(n_states*(N+1)+1:end)),n_controls,N);
     u_cl(:,mpciter+1) = u_ol(:,1);
-    
-    % Update states
-    x0 = x0 + dt*f(x0,u_cl(:,mpciter+1));
+        
+    % Apply the input and get new state measurement
+    k1 = f(x0, u_cl(:,mpciter+1));   
+    k2 = f(x0 + dt/2*k1, u_cl(:,mpciter+1)); 
+    k3 = f(x0 + dt/2*k2, u_cl(:,mpciter+1));
+    k4 = f(x0 + dt*k3, u_cl(:,mpciter+1)); 
+    x0 = x0 + dt/6*(k1 + 2*k2 + 2*k3 + k4);
+
     x0 = full(x0);
     x_cl(:,mpciter+2) = x0;
     U0 = [u_ol(:,2:N) u_ol(:,N)];
