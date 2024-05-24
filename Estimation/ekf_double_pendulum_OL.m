@@ -17,10 +17,6 @@ v_max = 5e-2; v_min = -v_max;
 w_max = 1e-3; w_min = -w_max;
 
 
-
-N_MHE = 30;
-
-
 % System dynamics
 states = SX.sym('states',4,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
 n_states = length(states);         % Number of states
@@ -36,14 +32,6 @@ f = Function('f',{states,process_noise},{DoublePendulumDynamics(states,0)+proces
 
 % Output function
 h = Function('h',{states},{states(1:2)});
-
-% Solver options
-opts = struct;
-opts.ipopt.max_iter = 2000;
-opts.ipopt.print_level = 0;         % Set to 0 for minimal output
-opts.print_time = 0;
-opts.ipopt.acceptable_tol = 1e-8;
-opts.ipopt.acceptable_obj_change_tol = 1e-6;
 
 
 % Initial conditions
