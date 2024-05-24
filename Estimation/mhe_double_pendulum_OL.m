@@ -245,6 +245,11 @@ for k  = 1 : N_sim
         W_est_init = [W_est zeros(n_process_noise,1)];
     end
 
+    if mod(k,10)==0
+        disp(['Iteration ', num2str(k), ' / ', num2str(N_sim)])
+    end
+
+
     
 end
 
@@ -252,11 +257,11 @@ end
 % Plotting
 figure
 subplot(2,1,1)
-plot(t,x_OL_noisy([1,2],:)); hold on
+plot(t,x_OL_noisy([1,2],:), '--'); hold on
 plot(t,x_est_cl([1,2],:));
 legend({'$\theta_1$','$\theta_2$','$\hat \theta_1$','$\hat \theta_2$'}, Interpreter="latex")
 subplot(2,1,2)
-plot(t,x_OL_noisy([3,4],:)); hold on
+plot(t,x_OL_noisy([3,4],:),'--'); hold on
 plot(t,x_est_cl([3,4],:));
 legend({'$\dot \theta_1$','$\dot \theta_2$','$\hat{\dot \theta_1}$','$\hat{\dot \theta_2}$'}, Interpreter="latex")
 

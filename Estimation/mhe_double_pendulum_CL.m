@@ -14,7 +14,7 @@ sim_time = 5;           % Maximum simulation time
 N_sim = sim_time/dt;
 
 v_max = 5e-2; v_min = -v_max;
-w_max = 1e-5; w_min = -w_max;
+w_max = 1e-3; w_min = -w_max;
 
 N_MHE = 30;
 N_MPC = 20;                 % Prediction horizon
@@ -173,7 +173,7 @@ for k  = 1 : N_sim
     U0 = [u_ol(:,2:N_MPC) u_ol(:,N_MPC)];
     X0 = [x_ol(:,2:end) x_ol(:,end)];
     t(k+1) = t(k)+dt;
-    % drawpendulum(xt_noisy(1), xt_noisy(2));
+    drawpendulum(xt_noisy(1), xt_noisy(2));
 end
 
 t = t(1:end-1);
@@ -195,8 +195,8 @@ xlabel('$t$'); ylabel('$u$')
 sgtitle('Closed-loop trajectories: Double Pendulum')
 
 
-x_max = ceil(max(max(x_cl_noisy))); x_min = -x_max;
-y_max = ceil(max(max(y_cl))); y_min = -y_max;
+x_max = 2*ceil(max(max(x_cl_noisy))); x_min = -x_max;
+y_max = 2*ceil(max(max(y_cl))); y_min = -y_max;
 
       
 
@@ -205,11 +205,11 @@ x0_hat = [pi; pi; 0; 0]; % Initial guess for \hat x(t-N)
 
 % Weighting matrix for the estimated process disturbance
 Q = 1 / (1/12*(w_max - w_min)^2) * eye(n_process_noise);
-Q = 1e3*eye(n_states);
+Q = 100*eye(n_states);
 
 % Weighting matrix for the estimated measurement noise
 R = 1 / (1/12*(v_max - v_min)^2) * eye(n_outputs);
-R = 1e1;
+R = 10;
 
 % Weighting matrix for prior weighting
 P = 1*eye(n_states);
@@ -341,6 +341,10 @@ for k  = 1 : N_sim
         W_est_init = [W_est zeros(n_process_noise,1)];
     end
 
+    if mod(k,10)==0
+        disp(['Iteration ', num2str(k), ' / ', num2str(N_sim)])
+    end
+
     
 end
 
@@ -348,11 +352,11 @@ end
 % Plotting
 figure
 subplot(2,1,1)
-plot(t,x_cl_noisy([1,2],:)); hold on
+plot(t,x_cl_noisy([1,2],:), '--'); hold on
 plot(t,x_est_cl([1,2],:));
 legend({'$\theta_1$','$\theta_2$','$\hat \theta_1$','$\hat \theta_2$'}, Interpreter="latex")
 subplot(2,1,2)
-plot(t,x_cl_noisy([3,4],:)); hold on
+plot(t,x_cl_noisy([3,4],:), '--'); hold on
 plot(t,x_est_cl([3,4],:));
 legend({'$\dot \theta_1$','$\dot \theta_2$','$\hat{\dot \theta_1}$','$\hat{\dot \theta_2}$'}, Interpreter="latex")
 
