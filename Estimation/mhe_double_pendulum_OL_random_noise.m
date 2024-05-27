@@ -112,7 +112,7 @@ x0_hat = [0; 0; 0; 0]; % Initial guess for \hat x(t-N)
 
 % Weighting matrix for the estimated process disturbance
 Q = 1 / (1/12*(w_max - w_min)^2) * eye(n_process_noise);
-Q = 1e3*eye(n_states);
+Q = 1e3*eye(n_process_noise);
 
 % Weighting matrix for the estimated measurement noise
 R = 1 / (1/12*(v_max - v_min)^2) * eye(n_outputs);

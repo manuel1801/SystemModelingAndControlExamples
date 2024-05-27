@@ -31,7 +31,6 @@ n_process_noise = length(process_noise);
 
 % Create a function handle for the dynamics
 f = Function('f',{states,controls,process_noise},{DoublePendulumDynamics(states,controls)+process_noise});
-% f_noisy = Function('f',{states,controls,process_noise},{DoublePendulumDynamicsNoise(states,controls,process_noise)});
 
 % Output function
 h = Function('h',{states},{states(1:2)});
@@ -205,7 +204,7 @@ x0_hat = [pi; pi; 0; 0]; % Initial guess for \hat x(t-N)
 
 % Weighting matrix for the estimated process disturbance
 Q = 1 / (1/12*(w_max - w_min)^2) * eye(n_process_noise);
-Q = 100*eye(n_states);
+Q = 100*eye(n_process_noise);
 
 % Weighting matrix for the estimated measurement noise
 R = 1 / (1/12*(v_max - v_min)^2) * eye(n_outputs);
