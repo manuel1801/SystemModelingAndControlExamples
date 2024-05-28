@@ -6,7 +6,7 @@
 clc; clear; close all;
 
 % Symbolic variables for the double pendulumn's parameters
-syms m0 m1 m2 L1 L2 l1 l2 J1 J2 g r1 r2 p 
+syms m0 m1 m2 L1 L2 l1 l2 J1 J2 g r1 r2 p
 params_sym = {m0 m1 m2 L1 L2 l1 l2 J1 J2 g r1 r2 p};
 
 % Symbolic variables for the state q=[q1,q2], its 1st and 2nd time
@@ -27,8 +27,8 @@ J1_num = m1_num*L1_num^2/12;
 J2_num = m2_num*L2_num^2/12;
 r1_num = 0.02;
 r2_num = 0.04;
-p_num = J2_num*m2_num*L1_num^2 + m1_num*m2_num*l1_num^2*l2_num^2 + J2_num*m1_num*l1_num^2 + J1_num*m2_num*l2_num^2 + J1_num*J2_num;
-params_num = {m0_num m1_num m2_num L1_num L2_num l1_num l2_num J1_num J2_num g_num r1_num r2_num p_num};
+
+% params_num = {m0_num m1_num m2_num L1_num L2_num l1_num l2_num J1_num J2_num g_num r1_num r2_num p_num};
 
 % Lagrange Function for the double pendulum
 L = 1/2*(m0 + m1 + m2)*q0_dot^2 ...
@@ -123,6 +123,13 @@ M_inv = inv(M);
 double_pendulum_ode = [q_dot;-M_inv*D-M_inv*C-M_inv*R*q_dot+M_inv*H*u];
 double_pendulum_ode = simplify(double_pendulum_ode);
 
+% Substitute p = (J2*L1^2*m2^2 + J2*l1^2*m1^2 + J1*l2^2*m2^2 + 2*J1*J2*m0 + 2*J1*J2*m1 + 2*J1*J2*m2 + L1^2*l2^2*m0*m2^2 + L1^2*l2^2*m1*m2^2 + 2*J2*L1^2*m0*m2 + 2*J2*L1^2*m1*m2 + l1^2*l2^2*m1*m2^2 + l1^2*l2^2*m1^2*m2 + 2*J2*l1^2*m0*m1 + 2*J1*l2^2*m0*m2 + 2*J1*l2^2*m1*m2 + 2*J2*l1^2*m1*m2 - J2*L1^2*m2^2*cos(2*q1) - J2*l1^2*m1^2*cos(2*q1) - J1*l2^2*m2^2*cos(2*q2) - L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + 2*l1^2*l2^2*m0*m1*m2 - l1^2*l2^2*m1^2*m2*cos(2*q1) - l1^2*l2^2*m1*m2^2*cos(2*q2) - L1^2*l2^2*m0*m2^2*cos(2*q1 - 2*q2) - L1^2*l2^2*m1*m2^2*cos(2*q1 - 2*q2) - L1*l1*l2^2*m1*m2^2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q2) - 2*J2*L1*l1*m1*m2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q1 - 2*q2))
+double_pendulum_ode = subs(double_pendulum_ode, (J2*L1^2*m2^2 + J2*l1^2*m1^2 + J1*l2^2*m2^2 + 2*J1*J2*m0 + 2*J1*J2*m1 + 2*J1*J2*m2 + L1^2*l2^2*m0*m2^2 + L1^2*l2^2*m1*m2^2 + 2*J2*L1^2*m0*m2 + 2*J2*L1^2*m1*m2 + l1^2*l2^2*m1*m2^2 + l1^2*l2^2*m1^2*m2 + 2*J2*l1^2*m0*m1 + 2*J1*l2^2*m0*m2 + 2*J1*l2^2*m1*m2 + 2*J2*l1^2*m1*m2 - J2*L1^2*m2^2*cos(2*q1) - J2*l1^2*m1^2*cos(2*q1) - J1*l2^2*m2^2*cos(2*q2) - L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + 2*l1^2*l2^2*m0*m1*m2 - l1^2*l2^2*m1^2*m2*cos(2*q1) - l1^2*l2^2*m1*m2^2*cos(2*q2) - L1^2*l2^2*m0*m2^2*cos(2*q1 - 2*q2) - L1^2*l2^2*m1*m2^2*cos(2*q1 - 2*q2) - L1*l1*l2^2*m1*m2^2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q2) - 2*J2*L1*l1*m1*m2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q1 - 2*q2)), p);
+
+
+disp('The double pendulum equation in state space form:')
+disp(['x_dot = ']); disp(double_pendulum_ode )
+
 % Linearization of f around the origin (up right position of the pendulum)
 % Compute jacobian of f w.r.t. x and u
 A = jacobian(double_pendulum_ode,x);
@@ -135,16 +142,19 @@ A = simplify(A);
 B = subs(B,{q0 q1 q2 q0_dot q1_dot q2_dot},{0 0 0 0 0 0});
 B = simplify(B);
 
-% For better readability use p := J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2
-A = subs(A,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
-B = subs(B,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
+% % For better readability use p_lin := J1*J2*m0 + J1*J2*m1 + J1*J2*m2 + J2*L1^2*m0*m2 + J2*L1^2*m1*m2 + J2*l1^2*m0*m1 + J1*l2^2*m0*m2 + J1*l2^2*m1*m2 + J2*l1^2*m1*m2 - 2*J2*L1*l1*m1*m2 + l1^2*l2^2*m0*m1*m2
+% A = subs(A,J1*J2*m0 + J1*J2*m1 + J1*J2*m2 + J2*L1^2*m0*m2 + J2*L1^2*m1*m2 + J2*l1^2*m0*m1 + J1*l2^2*m0*m2 + J1*l2^2*m1*m2 + J2*l1^2*m1*m2 - 2*J2*L1*l1*m1*m2 + l1^2*l2^2*m0*m1*m2,p_lin);
+% B = subs(B,J1*J2*m0 + J1*J2*m1 + J1*J2*m2 + J2*L1^2*m0*m2 + J2*L1^2*m1*m2 + J2*l1^2*m0*m1 + J1*l2^2*m0*m2 + J1*l2^2*m1*m2 + J2*l1^2*m1*m2 - 2*J2*L1*l1*m1*m2 + l1^2*l2^2*m0*m1*m2,p_lin);
 
 % A and B matrix of the linearized model
 disp('A='); disp(A);
 disp('B='); disp(B);
 
-% And with the numeric values for the parameters
-A_num = double(subs(A,params_sym, params_num));
-B_num = double(subs(B,params_sym, params_num));
-disp('A='); disp(A_num);
-disp('B='); disp(B_num);
+% For the linearization around the origin use: 
+% p = (J2*L1^2*m2^2 + J2*l1^2*m1^2 + J1*l2^2*m2^2 + 2*J1*J2*m0 + 2*J1*J2*m1 + 2*J1*J2*m2 + L1^2*l2^2*m0*m2^2 + L1^2*l2^2*m1*m2^2 + 2*J2*L1^2*m0*m2 + 2*J2*L1^2*m1*m2 + l1^2*l2^2*m1*m2^2 + l1^2*l2^2*m1^2*m2 + 2*J2*l1^2*m0*m1 + 2*J1*l2^2*m0*m2 + 2*J1*l2^2*m1*m2 + 2*J2*l1^2*m1*m2 - J2*L1^2*m2^2 - J2*l1^2*m1^2 - J1*l2^2*m2^2 - L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + 2*l1^2*l2^2*m0*m1*m2 - l1^2*l2^2*m1^2*m2 - l1^2*l2^2*m1*m2^2 - L1^2*l2^2*m0*m2^2 - L1^2*l2^2*m1*m2^2 - L1*l1*l2^2*m1*m2^2 + L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + L1*l1*l2^2*m1*m2^2)
+
+% % And with the numeric values for the parameters
+% A_num = double(subs(A,params_sym, params_num));
+% B_num = double(subs(B,params_sym, params_num));
+% disp('A='); disp(A_num);
+% disp('B='); disp(B_num);
