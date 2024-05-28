@@ -1,4 +1,5 @@
-% MATLAB code for Model Predictive Control (MPC) of a double inverted pendulum
+% MATLAB code for Model Predictive Control (MPC) of a double inverted
+% pendulum on a cart.
 
 clear; close all; clc;
 
@@ -10,18 +11,20 @@ import casadi.*
 
 % Parameters
 dt = 0.05;              % Sampling time [s]
-N_MPC = 20;                 % Prediction horizon
-sim_time = 5;           % Maximum simulation time
+N_MPC = 25;                 % Prediction horizon
+sim_time = 8;           % Maximum simulation time
 N_sim = sim_time/dt;
 
+x_lim = 5;              % constraints for the carts position
+
 % System dynamics
-states = SX.sym('states',4,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
+states = SX.sym('states',6,1);     % System states [theta_1; theta_2; theta_1_dot; theta_2_dot]
 n_states = length(states);         % Number of states
 controls = SX.sym('controls');      % System inputs
 n_controls = length(controls);      % Number of inputs
 
 % Create a function handle for the dynamics
-f = Function('f',{states,controls},{DoublePendulumDynamics(states,controls)});
+f = Function('f',{states,controls},{DoublePendulumCartDynamics(states,controls)});
 
 % Decision variables
 U = SX.sym('U',n_controls,N_MPC);       % Control variables
@@ -35,11 +38,11 @@ obj = 0;    % Objective function
 g = [];     % Constraints vector
 
 % Control limits
-u_ub = 20; u_lb = -20;
+u_ub = 100; u_lb = -100;
 
 % Weighting matrices
-Q = zeros(n_states);
-Q(1,1) = 10; Q(2,2) = 10; Q(3,3) = 1; Q(4,4) = 1; % State weights
+Q = blkdiag(200,1e3*eye(2),eye(3));
+
 R = 0.1;    % Control weight
 
 % Initial condition constraint
@@ -85,20 +88,24 @@ solver = nlpsol('solver', 'ipopt', nlp_prob, opts);
 args = struct;
 args.lbg(1:n_states*(N_MPC+1)) = 0;     % Equality constraints
 args.ubg(1:n_states*(N_MPC+1)) = 0;     % Equality constraints
-args.lbx(1:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
-args.ubx(1:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(1:n_states:n_states*(N_MPC+1),1) = -x_lim;    % State lower bounds
+args.ubx(1:n_states:n_states*(N_MPC+1),1) = x_lim;     % State upper bounds
 args.lbx(2:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
 args.ubx(2:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
 args.lbx(3:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
 args.ubx(3:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
 args.lbx(4:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
 args.ubx(4:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(5:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(5:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
+args.lbx(6:n_states:n_states*(N_MPC+1),1) = -inf;    % State lower bounds
+args.ubx(6:n_states:n_states*(N_MPC+1),1) = inf;     % State upper bounds
 args.lbx(n_states*(N_MPC+1)+1:n_controls:n_states*(N_MPC+1)+n_controls*N_MPC,1) = u_lb;  % Control lower bounds
 args.ubx(n_states*(N_MPC+1)+1:n_controls:n_states*(N_MPC+1)+n_controls*N_MPC,1) = u_ub;   % Control upper bounds
 
 % Initial conditions
-x0 = [pi; pi; 0; 0];    % Initial condition
-xs = [0; 0; 0; 0];      % Reference posture
+x0 = [0; pi; pi; 0; 0; 0];    % Initial condition
+xs = [0; 0; 0; 0; 0; 0];      % Reference posture
 
 x_cl(:,1) = x0;
 t(1) = 0;
@@ -135,33 +142,64 @@ for k  = 1 : N_sim
     U0 = [u_ol(:,2:N_MPC) u_ol(:,N_MPC)];
     X0 = [x_ol(:,2:end) x_ol(:,end)];
     t(k+1) = t(k)+dt;
-    drawpendulum(xt(1), xt(2));
+    drawpendulum_on_cart(xt(1), xt(2), xt(3));
 end
 
-% Plotting
+% Closed-Loop
 figure
-subplot(3,1,1)
-plot(t(1:end-1),x_cl([1,2],1:end-1))
-legend({'$\theta_1$','$\theta_3$'}, Interpreter="latex")
-subplot(3,1,2)
-plot(t(1:end-1),x_cl([3,4],1:end-1))
-legend({'$\dot \theta_1$','$\dot \theta_2$'}, Interpreter="latex")
-subplot(3,1,3)
+subplot(4,1,1)
+plot(t(1:end-1),x_cl([1,4],1:end-1))
+legend({'$\theta_1$','$\dot \theta_1$'}, Interpreter="latex")
+subplot(4,1,2)
+plot(t(1:end-1),x_cl([2,5],1:end-1))
+legend({'$\theta_2$','$\dot \theta_2$'}, Interpreter="latex")
+subplot(4,1,3)
+plot(t(1:end-1),x_cl([3,6],1:end-1))
+legend({'$\theta_3$','$\dot \theta_3$'}, Interpreter="latex")
+subplot(4,1,4)
 plot(t(1:end-1),u_cl)
 xlabel('$t$'); ylabel('$u$')
 sgtitle('Closed-loop trajectories: Double Pendulum')
 
 
-function drawpendulum(theta1,theta2)
-% This function draws the double pendulum, at the current angels theta1 and theta2
-    figure(3);    
-    axis equal    
+
+function drawpendulum_on_cart(x_cart, theta1, theta2)
+    % This function draws the double pendulum on a cart, at the current 
+    % position x_cart and angles theta1 and theta2
+    figure(3);
+    clf;  % Clear current figure
+    hold on;  % Hold on to draw multiple items
+    
+    % Pendulum parameters
     L1 = 0.5;
     L2 = 0.75;
-    x1 = L1*sin(theta1); y1 = L1*cos(theta1);
-    x2 = x1 + L2*sin(theta2); y2 = y1 + L2*cos(theta2);
-    plot([0,x1,x2],[0,y1,y2],'o-','LineWidth',2.5,'color',[0 .447 .741], 'MarkerFaceColor',[0 .447 .741]);
-    xlim([-1,1])
-    ylim([-1.5,1.5])
     
+    % Cart parameters
+    cart_width = 0.4;
+    cart_height = 0.2;
+    
+    % Calculate pendulum positions
+    x1 = x_cart + L1*sin(theta1); 
+    y1 = L1*cos(theta1);
+    x2 = x1 + L2*sin(theta2); 
+    y2 = y1 + L2*cos(theta2);
+    
+    % Draw cart
+    rectangle('Position', [x_cart - cart_width/2, -cart_height/2, cart_width, cart_height], 'Curvature', 0.1, 'FaceColor', [0.6 0.6 0.6]);
+    
+    % Draw pendulum
+    plot([x_cart, x1, x2], [0, y1, y2], 'o-', 'LineWidth', 2.5, 'color', [0 .447 .741], 'MarkerFaceColor', [0 .447 .741]);
+    
+    % Set plot limits
+    xlim([-5, 5]);
+    ylim([-1.5, 1.5]);
+    
+    % Add grid and labels
+    grid on;
+    xlabel('X Position');
+    ylabel('Y Position');
+    
+    hold off;  % Release the hold
 end
+
+
