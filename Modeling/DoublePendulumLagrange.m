@@ -26,7 +26,9 @@ J1_num = m1_num*L1_num^2/12;
 J2_num = m2_num*L2_num^2/12;
 r1_num = 0.02;
 r2_num = 0.04;
-p_num = J2_num*m2_num*L1_num^2 + m1_num*m2_num*l1_num^2*l2_num^2 + J2_num*m1_num*l1_num^2 + J1_num*m2_num*l2_num^2 + J1_num*J2_num;
+
+p_num = 2*J1_num*J2_num + L1_num^2*l2_num^2*m2_num^2 + 2*J2_num*L1_num^2*m2_num + 2*J2_num*l1_num^2*m1_num + 2*J1_num*l2_num^2*m2_num - L1_num^2*l2_num^2*m2_num^2 + 2*l1_num^2*l2_num^2*m1_num*m2_num; 
+
 params_num = {m1_num m2_num L1_num L2_num l1_num l2_num J1_num J2_num g_num r1_num r2_num p_num};
 
 % Lagrange Function for the double pendulum
@@ -137,5 +139,25 @@ disp('B0='); disp(B0);
 % For the linearization around the origin use: 
 % p = 2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2 + 2*l1^2*l2^2*m1*m2 
 
+% Discretize
+syms dt
 
+% Substitute the system parameters with numeric values
+double_pendulum_ode = subs(double_pendulum_ode, params_sym, params_num);
 
+f_c = @(x,u) subs( double_pendulum_ode, {q1 q2 q1_dot q2_dot u}, {x(1), x(2), x(3), x(4), u});
+
+k1 = f_c(x,  u);  
+k2 = f_c(x + dt/2*k1, u); 
+k3 = f_c(x + dt/2*k2, u);
+k4 = f_c(x + dt*k3, u); 
+f_d = x + dt/6*(k1 + 2*k2 + 2*k3 + k4);   
+
+A_d = jacobian(f_d,x);
+B_d = jacobian(f_d,u);
+
+disp('A='); disp(A);
+disp('B='); disp(B);
+
+matlabFunction(A_d,'File','getA_d')
+matlabFunction(B_d,'File','getB_d')
