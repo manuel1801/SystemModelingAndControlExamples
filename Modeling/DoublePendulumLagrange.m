@@ -108,28 +108,34 @@ M_inv = inv(M);
 double_pendulum_ode = [q_dot;-M_inv*D-M_inv*C-M_inv*R*q_dot+M_inv*H*u];
 double_pendulum_ode = simplify(double_pendulum_ode);
 
+% Substitute p = 2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2*cos(2*q1 - 2*q2) + 2*l1^2*l2^2*m1*m2 
+double_pendulum_ode = subs(double_pendulum_ode, 2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2*cos(2*q1 - 2*q2) + 2*l1^2*l2^2*m1*m2 , p);
+
+
+disp('The double pendulum equation in state space form:')
+disp(['x_dot = ']); disp(double_pendulum_ode )
+
 % Linearization of f around the origin (up right position of the pendulum)
 % Compute jacobian of f w.r.t. x and u
-A = jacobian(double_pendulum_ode,x);
-B = jacobian(double_pendulum_ode,u);
+A = jacobian(double_pendulum_ode,x); A = simplify(A);
+B = jacobian(double_pendulum_ode,u); B = simplify(B);
 
-% Insert the origin x = [0;0;0;0]
-A = subs(A,{q1 q2 q1_dot q2_dot},{0 0 0 0});
-A = simplify(A);
-
-B = subs(B,{q1 q2 q1_dot q2_dot},{0 0 0 0});
-B = simplify(B);
-
-% For better readability use p := J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2
-A = subs(A,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
-B = subs(B,J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2,p);
-
-% A and B matrix of the linearized model
 disp('A='); disp(A);
 disp('B='); disp(B);
 
-% And with the numeric values for the parameters
-A_num = double(subs(A,params_sym, params_num));
-B_num = double(subs(B,params_sym, params_num));
-disp('A='); disp(A_num);
-disp('B='); disp(B_num);
+% Insert the origin x = [0;0;0;0]
+A0 = subs(A,{q1 q2 q1_dot q2_dot},{0 0 0 0});
+A0 = simplify(A0);
+
+B0 = subs(B,{q1 q2 q1_dot q2_dot},{0 0 0 0});
+B0 = simplify(B0);
+
+% A and B matrix of the linearized model
+disp('A0='); disp(A0);
+disp('B0='); disp(B0);
+
+% For the linearization around the origin use: 
+% p = 2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2 + 2*l1^2*l2^2*m1*m2 
+
+
+

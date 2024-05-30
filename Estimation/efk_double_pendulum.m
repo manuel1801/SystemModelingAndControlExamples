@@ -59,20 +59,22 @@ J2 = m2*L2^2/12;    % Inertia 2
 r1 = 0.02; r2 = 0.04;   % Frictrion parameters
 
 % Combined parameter
-p = J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2;
+% p = J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2;
  
 % System matrices
-A=[
-                                   0,                                    0,                      1,                                0
-                                   0,                                    0,                      0,                                1
-(g*(m2*l2^2 + J2)*(L1*m2 + l1*m1))/p,                  -(L1*g*l2^2*m2^2)/p, -(r1*(m2*l2^2 + J2))/p,                  (L1*l2*m2*r2)/p
-     -(L1*g*l2*m2*(L1*m2 + l1*m1))/p, (g*l2*m2*(m2*L1^2 + m1*l1^2 + J1))/p,        (L1*l2*m2*r1)/p, -(r2*(m2*L1^2 + m1*l1^2 + J1))/p];
+% A_tmp =[
+%                                    0,                                    0,                      1,                                0
+%                                    0,                                    0,                      0,                                1
+% (g*(m2*l2^2 + J2)*(L1*m2 + l1*m1))/p,                  -(L1*g*l2^2*m2^2)/p, -(r1*(m2*l2^2 + J2))/p,                  (L1*l2*m2*r2)/p
+%      -(L1*g*l2*m2*(L1*m2 + l1*m1))/p, (g*l2*m2*(m2*L1^2 + m1*l1^2 + J1))/p,        (L1*l2*m2*r1)/p, -(r2*(m2*L1^2 + m1*l1^2 + J1))/p];
  
-B=[
-               0
-               0
-(m2*l2^2 + J2)/p
-   -(L1*l2*m2)/p];
+% B =[
+%                0
+%                0
+% (m2*l2^2 + J2)/p
+%    -(L1*l2*m2)/p];
+
+[A,B] = getDoublePendulumAB(zeros(n_states,1), zeros(n_controls,1));
 
 
 % Output matrices
@@ -118,7 +120,7 @@ for i = 1:N_sim
     k4 = f(x_cl_noisy(:,i) + dt*k3, u_cl(:,i), w(:,i)); 
     x_cl_noisy(:,i+1) = full(x_cl_noisy(:,i) + dt/6*(k1 + 2*k2 + 2*k3 + k4));    
     
-%     drawpendulum(x_cl_noisy(1,i+1),x_cl_noisy(2,i+1)); % Draw pendulum at each step
+    drawpendulum(x_cl_noisy(1,i+1),x_cl_noisy(2,i+1)); % Draw pendulum at each step
 end
 
 t = t(1:end-1);
@@ -142,7 +144,7 @@ sgtitle('Closed-loop trajectories: Double Pendulum')
 
 
 % State estimation using EKF
-x_hat_prior = + 0.1*(2*rand(n_states, 1)-1);
+x_hat_prior = x0 + 0.1*(2*rand(n_states, 1)-1);
 P_prior = (x_hat_prior - x0)*(x_hat_prior - x0)'; %  + 20*(2*rand(n_states,n_states)-0.5);
 
 R = 1/3*(v_max)^2 * eye(n_outputs);      % variance of v

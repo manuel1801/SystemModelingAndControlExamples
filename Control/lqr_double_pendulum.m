@@ -43,18 +43,19 @@ r1 = 0.02; r2 = 0.04;   % Frictrion parameters
 p = J2*m2*L1^2 + m1*m2*l1^2*l2^2 + J2*m1*l1^2 + J1*m2*l2^2 + J1*J2;
  
 % System matrices
-A=[
-                                   0,                                    0,                      1,                                0
-                                   0,                                    0,                      0,                                1
-(g*(m2*l2^2 + J2)*(L1*m2 + l1*m1))/p,                  -(L1*g*l2^2*m2^2)/p, -(r1*(m2*l2^2 + J2))/p,                  (L1*l2*m2*r2)/p
-     -(L1*g*l2*m2*(L1*m2 + l1*m1))/p, (g*l2*m2*(m2*L1^2 + m1*l1^2 + J1))/p,        (L1*l2*m2*r1)/p, -(r2*(m2*L1^2 + m1*l1^2 + J1))/p];
- 
-B=[
-               0
-               0
-(m2*l2^2 + J2)/p
-   -(L1*l2*m2)/p];
+% A=[
+%                                    0,                                    0,                      1,                                0
+%                                    0,                                    0,                      0,                                1
+% (g*(m2*l2^2 + J2)*(L1*m2 + l1*m1))/p,                  -(L1*g*l2^2*m2^2)/p, -(r1*(m2*l2^2 + J2))/p,                  (L1*l2*m2*r2)/p
+%      -(L1*g*l2*m2*(L1*m2 + l1*m1))/p, (g*l2*m2*(m2*L1^2 + m1*l1^2 + J1))/p,        (L1*l2*m2*r1)/p, -(r2*(m2*L1^2 + m1*l1^2 + J1))/p];
+% 
+% B=[
+%                0
+%                0
+% (m2*l2^2 + J2)/p
+%    -(L1*l2*m2)/p];
 
+[A,B] = getDoublePendulumAB(zeros(n_states,1), zeros(n_controls,1));
 
 % Output matrices
 C = [1 0 0 0;

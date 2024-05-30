@@ -26,11 +26,14 @@ function xdot = DoublePendulumDynamics(x,u)
     q1_dot = x(3);
     q2_dot = x(4);
 
-    % Evaluate the nonlinear dynamics function
-    xdot = [q1_dot
-            q2_dot
-            (2*J2*u + 2*l2^2*m2*u - 2*J2*q1_dot*r1 - 2*l2^2*m2*q1_dot*r1 - 2*L1*l2^3*m2^2*q2_dot^2*sin(q1 - q2) + L1*g*l2^2*m2^2*sin(q1) + 2*J2*L1*g*m2*sin(q1) + L1*g*l2^2*m2^2*sin(q1 - 2*q2) + 2*J2*g*l1*m1*sin(q1) - L1^2*l2^2*m2^2*q1_dot^2*sin(2*q1 - 2*q2) + 2*L1*l2*m2*q2_dot*r2*cos(q1 - q2) - 2*J2*L1*l2*m2*q2_dot^2*sin(q1 - q2) + 2*g*l1*l2^2*m1*m2*sin(q1))/(2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2*cos(2*q1 - 2*q2) + 2*l1^2*l2^2*m1*m2)
-            (2*L1^3*l2*m2^2*q1_dot^2*sin(q1 - q2) - 2*L1^2*m2*q2_dot*r2 - 2*l1^2*m1*q2_dot*r2 - L1^2*g*l2*m2^2*sin(2*q1 - q2) - 2*J1*q2_dot*r2 + L1^2*g*l2*m2^2*sin(q2) + 2*J1*g*l2*m2*sin(q2) + L1^2*l2^2*m2^2*q2_dot^2*sin(2*q1 - 2*q2) - 2*L1*l2*m2*u*cos(q1 - q2) + 2*L1*l2*m2*q1_dot*r1*cos(q1 - q2) + 2*J1*L1*l2*m2*q1_dot^2*sin(q1 - q2) + 2*g*l1^2*l2*m1*m2*sin(q2) - L1*g*l1*l2*m1*m2*sin(2*q1 - q2) + 2*L1*l1^2*l2*m1*m2*q1_dot^2*sin(q1 - q2) - L1*g*l1*l2*m1*m2*sin(q2))/(2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2*cos(2*q1 - 2*q2) + 2*l1^2*l2^2*m1*m2)];
+    p = 2*J1*J2 + L1^2*l2^2*m2^2 + 2*J2*L1^2*m2 + 2*J2*l1^2*m1 + 2*J1*l2^2*m2 - L1^2*l2^2*m2^2*cos(2*q1 - 2*q2) + 2*l1^2*l2^2*m1*m2;
+
+    xdot =  [q1_dot;
+             q2_dot;
+             (2*J2*u + 2*l2^2*m2*u - 2*J2*q1_dot*r1 - 2*l2^2*m2*q1_dot*r1 - 2*L1*l2^3*m2^2*q2_dot^2*sin(q1 - q2) + L1*g*l2^2*m2^2*sin(q1) + 2*J2*L1*g*m2*sin(q1) + L1*g*l2^2*m2^2*sin(q1 - 2*q2) + 2*J2*g*l1*m1*sin(q1) - L1^2*l2^2*m2^2*q1_dot^2*sin(2*q1 - 2*q2) + 2*L1*l2*m2*q2_dot*r2*cos(q1 - q2) - 2*J2*L1*l2*m2*q2_dot^2*sin(q1 - q2) + 2*g*l1*l2^2*m1*m2*sin(q1))/p;
+             (2*L1^3*l2*m2^2*q1_dot^2*sin(q1 - q2) - 2*L1^2*m2*q2_dot*r2 - 2*l1^2*m1*q2_dot*r2 - L1^2*g*l2*m2^2*sin(2*q1 - q2) - 2*J1*q2_dot*r2 + L1^2*g*l2*m2^2*sin(q2) + 2*J1*g*l2*m2*sin(q2) + L1^2*l2^2*m2^2*q2_dot^2*sin(2*q1 - 2*q2) - 2*L1*l2*m2*u*cos(q1 - q2) + 2*L1*l2*m2*q1_dot*r1*cos(q1 - q2) + 2*J1*L1*l2*m2*q1_dot^2*sin(q1 - q2) + 2*g*l1^2*l2*m1*m2*sin(q2) - L1*g*l1*l2*m1*m2*sin(2*q1 - q2) + 2*L1*l1^2*l2*m1*m2*q1_dot^2*sin(q1 - q2) - L1*g*l1*l2*m1*m2*sin(q2))/p];
+ 
+
 
 end
 

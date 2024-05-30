@@ -16,7 +16,7 @@ delta = 0.01;
 N = sim_time/delta;
 
 % Input
-u = 1*zeros(1,N);
+u = 1*ones(1,N);
 
 x = x0;
 t = 0;
