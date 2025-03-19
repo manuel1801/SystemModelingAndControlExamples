@@ -182,6 +182,7 @@ for i = 1:N_sim
     % add linearization of A that can be evaluated at any x (not at origin)
 
     A = getA(x_hat(:,i),u_cl(:,i));
+    % A = getA_d(dt, x_hat(1,i), x_hat(2,i), x_hat(3,i), x_hat(4,i), u_cl(:,i));
     P_prior = A*P*A' + W*Q*W';
 
     if mod(i,10)==0
