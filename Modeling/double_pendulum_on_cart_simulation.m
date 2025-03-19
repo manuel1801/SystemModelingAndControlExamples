@@ -1,10 +1,12 @@
 % This MATLAB script simulates the motion of the double pendulum given by 
 % the function DoublePendulumDynamics using the Runge-Kutta 4 (RK4) integration method.
 
+% TODO add simulation of linearized system
+
 clc; clear; close all;
 
 % Initial state (position and velocity)
-x0 = zeros(6,1);
+x0 = [0;pi+0.1;pi+0.1;zeros(3,1)];
 
 % Simulation time
 sim_time = 4;

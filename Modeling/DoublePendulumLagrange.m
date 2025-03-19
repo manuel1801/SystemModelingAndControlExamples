@@ -123,6 +123,20 @@ B = jacobian(double_pendulum_ode,u); B = simplify(B);
 disp('A='); disp(A);
 disp('B='); disp(B);
 
+% Create functions
+matlabFunction(A, 'File', '../functions/getA');
+
+% or
+
+% Create function file
+% fid = fopen('getA.m', 'w');
+% fprintf(fid, 'function A = getA()\n');
+% fprintf(fid, '\tA = [%s;\n\t\t%s;\n\t\t%s;\n\t\t%s];\n', char(A(1,:)), char(A(2,:)), char(A(3,:)), char(A(4,:)));
+% fprintf(fid, '\tA = [%s;\n\t\t%s;\n\t\t%s;\n\t\t%s];\n', char(A(1,:)), char(A(2,:)), char(A(3,:)), char(A(4,:)));
+% fprintf(fid, 'end\n');
+% fclose(fid);
+
+
 % Insert the origin x = [0;0;0;0]
 A0 = subs(A,{q1 q2 q1_dot q2_dot},{0 0 0 0});
 A0 = simplify(A0);

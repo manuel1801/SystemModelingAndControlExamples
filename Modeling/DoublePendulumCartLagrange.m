@@ -126,16 +126,18 @@ double_pendulum_ode = simplify(double_pendulum_ode);
 % Substitute p = (J2*L1^2*m2^2 + J2*l1^2*m1^2 + J1*l2^2*m2^2 + 2*J1*J2*m0 + 2*J1*J2*m1 + 2*J1*J2*m2 + L1^2*l2^2*m0*m2^2 + L1^2*l2^2*m1*m2^2 + 2*J2*L1^2*m0*m2 + 2*J2*L1^2*m1*m2 + l1^2*l2^2*m1*m2^2 + l1^2*l2^2*m1^2*m2 + 2*J2*l1^2*m0*m1 + 2*J1*l2^2*m0*m2 + 2*J1*l2^2*m1*m2 + 2*J2*l1^2*m1*m2 - J2*L1^2*m2^2*cos(2*q1) - J2*l1^2*m1^2*cos(2*q1) - J1*l2^2*m2^2*cos(2*q2) - L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + 2*l1^2*l2^2*m0*m1*m2 - l1^2*l2^2*m1^2*m2*cos(2*q1) - l1^2*l2^2*m1*m2^2*cos(2*q2) - L1^2*l2^2*m0*m2^2*cos(2*q1 - 2*q2) - L1^2*l2^2*m1*m2^2*cos(2*q1 - 2*q2) - L1*l1*l2^2*m1*m2^2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q2) - 2*J2*L1*l1*m1*m2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q1 - 2*q2))
 double_pendulum_ode = subs(double_pendulum_ode, (J2*L1^2*m2^2 + J2*l1^2*m1^2 + J1*l2^2*m2^2 + 2*J1*J2*m0 + 2*J1*J2*m1 + 2*J1*J2*m2 + L1^2*l2^2*m0*m2^2 + L1^2*l2^2*m1*m2^2 + 2*J2*L1^2*m0*m2 + 2*J2*L1^2*m1*m2 + l1^2*l2^2*m1*m2^2 + l1^2*l2^2*m1^2*m2 + 2*J2*l1^2*m0*m1 + 2*J1*l2^2*m0*m2 + 2*J1*l2^2*m1*m2 + 2*J2*l1^2*m1*m2 - J2*L1^2*m2^2*cos(2*q1) - J2*l1^2*m1^2*cos(2*q1) - J1*l2^2*m2^2*cos(2*q2) - L1*l1*l2^2*m1*m2^2 - 2*J2*L1*l1*m1*m2 + 2*l1^2*l2^2*m0*m1*m2 - l1^2*l2^2*m1^2*m2*cos(2*q1) - l1^2*l2^2*m1*m2^2*cos(2*q2) - L1^2*l2^2*m0*m2^2*cos(2*q1 - 2*q2) - L1^2*l2^2*m1*m2^2*cos(2*q1 - 2*q2) - L1*l1*l2^2*m1*m2^2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q2) - 2*J2*L1*l1*m1*m2*cos(2*q1) + L1*l1*l2^2*m1*m2^2*cos(2*q1 - 2*q2)), p);
 
-
 disp('The double pendulum equation in state space form:')
 disp(['x_dot = ']); disp(double_pendulum_ode )
 
-% Linearization of f around the origin (up right position of the pendulum)
+% Linearization of f around some points x,u
 % Compute jacobian of f w.r.t. x and u
-A = jacobian(double_pendulum_ode,x);
-B = jacobian(double_pendulum_ode,u);
+A = jacobian(double_pendulum_ode,x); A = simplify(A);
+B = jacobian(double_pendulum_ode,u); B = simplify(B);
 
-% Insert the origin x = [0;0;0;0]
+disp('A='); disp(A);
+disp('B='); disp(B);
+
+% Insert the origin x = [0;0;0;0] to get the linearization the origin (up right position of the pendulum)
 A = subs(A,{q0 q1 q2 q0_dot q1_dot q2_dot},{0 0 0 0 0 0});
 A = simplify(A);
 
